@@ -29,7 +29,7 @@ setuptools.setup(
     packages=setuptools.find_packages(exclude=['tests', 'docs']),
     python_requires='>=3.7',
     install_requires=[
-        'psycopg-binary >= 2.7',
+        'psycopg2-binary >= 2.7',
         'pytest >= 4.3',
         'testing.postgresql >= 1.3'
     ],
