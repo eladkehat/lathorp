@@ -1,6 +1,6 @@
 # Lathorp - PostgreSQL Testing Fixtures
 
-Emmett provides handy **pytest fixtures** for test code that involves access to a **PostgreSQL** database.
+Lathorp provides handy **pytest fixtures** for test code that involves access to a **PostgreSQL** database.
 
 For example, if the code under test writes data to a database, or queries it for data, you want to write tests to see
 that it writes and reads the data as you expect.
@@ -27,7 +27,7 @@ A helper function called `load_schema_definitions` can be used to create the dat
 files that you provide. Embed it in your own session-scoped fixture and call that together with `pg_connect`.
 
 
-## Using Emmett in Your Project
+## Using Lathorp in Your Project
 
 1. Include the `lathorp` package with the development packages of your projects.
 With `pipenv`:
@@ -49,7 +49,7 @@ def my_test(pg_connect):
 ```
 For more examples, see `tests/test_fixtures.py` in this project.
 
-1. Emmett truly shines when you use it together with schema definitions (SQL DDL) files and test data files (CSV or
+1. Lathorp truly shines when you use it together with schema definitions (SQL DDL) files and test data files (CSV or
 PostgreSQL-readable text).
 Create a session-scoped fixture that calls `load_schema_definitions` and give it the path to your schema definitions.
 Then use this fixture along with `pg_connect` and give it the path to your data files.
