@@ -3,62 +3,11 @@ import pathlib
 import psycopg2.extras
 import pytest
 
-from lathorp.fixtures import load_schema_definitions
-
 
 def test_pg_is_connectable(pg):
     """Tests that the pg fixtures yields a connectable database."""
     # A failure to connect would raise an exception and the test would fail
     psycopg2.connect(**pg.dsn())
-
-
-def test_load_schema_definitions_file(pg):
-    """Tests that the helper function loads data definitions from a file."""
-    query = '''SELECT * FROM pg_catalog.pg_tables
-               WHERE schemaname = 'public'
-               AND tablename = %s;'''
-    path = pathlib.Path(__file__) / '..' / 'pg_ddl' / 'test_table.sql'
-    load_schema_definitions(pg, path)
-    with psycopg2.connect(**pg.dsn()) as conn:
-        with conn.cursor() as cursor:
-            # Check that the `test_table` table exists
-            cursor.execute(query, ('test_table', ))
-            assert cursor.fetchone() is not None
-            # Check that a non-existing tables yield nothing
-            cursor.execute(query, ('another_table', ))
-            assert cursor.fetchone() is None
-            # Clean-up
-            cursor.execute('DROP TABLE IF EXISTS test_table;')
-
-
-def test_load_schema_definitions_dir(pg):
-    """Tests that the helper function loads data definitions from a directory.
-
-    Data definitions are expected to load from all the files directly under the directory.
-    """
-    query = '''SELECT tablename FROM pg_catalog.pg_tables
-               WHERE schemaname = 'public'
-               ORDER BY tablename;'''
-    path = pathlib.Path(__file__) / '..' / 'pg_ddl'
-    load_schema_definitions(pg, path)
-    with psycopg2.connect(**pg.dsn()) as conn:
-        with conn.cursor() as cursor:
-            cursor.execute(query)
-            assert cursor.fetchall() == [('another_table', ), ('test_table', )]
-            # Clean-up
-            cursor.execute('DROP TABLE IF EXISTS another_table;')
-            cursor.execute('DROP TABLE IF EXISTS test_table;')
-
-
-def test_load_schema_definitions_raises_on_invalid_def_path(pg):
-    """Tests the helper function with exceptional conditions.
-
-    The function is expected to raise a ValueError when given an invalid definitions path.
-    """
-    path = pathlib.Path(__file__) / 'nosuchpath'
-    assert not path.exists()
-    with pytest.raises(ValueError):
-        load_schema_definitions(pg, path)
 
 
 def test_pg_connect_is_usable(pg_connect):
@@ -93,6 +42,8 @@ def test_pg_connect_loads_data_file(init_schema, pg_connect):
     with conn.cursor() as cursor:
         cursor.execute('SELECT num FROM test_table;')
         assert cursor.fetchall() == [(1001, ), (1002, ), (1003, ), (None, ), (1005, )]
+        # Clean up for the next tests
+        cursor.execute('TRUNCATE test_table CASCADE;')
 
 
 def test_pg_connect_loads_data_dir(init_schema, pg_connect):
@@ -105,6 +56,8 @@ def test_pg_connect_loads_data_dir(init_schema, pg_connect):
         cursor.execute('SELECT num FROM test_table;')
         assert cursor.fetchall() == [(1001, ), (1002, ), (1003, ), (None, ), (1005, ),
                                      (2001, ), (2002, ), (2003, ), (None, ), (2005, )]
+        # Clean up for the next tests
+        cursor.execute('TRUNCATE test_table CASCADE;')
 
 
 def test_pg_connect_raises_on_invalid_path(pg_connect):
@@ -123,14 +76,20 @@ def test_pg_connect_raises_on_invalid_path(pg_connect):
         pg_connect(data_path=path)
 
 
-@pytest.mark.parametrize('data_file', ['001_test_table.csv', '002_test_table.txt'])
+@pytest.mark.parametrize('data_file', ['001_test_table.csv', '002_test_table.txt', None])
 def test_pg_connect_deletes_data(init_schema, pg_connect, data_file):
     """Tests that the pg_connect fixtures deletes data between test invocations.
 
     This test is parametrized so that it runs twice, loading a different data file each time.
     It ensures that following each invocation, only data from the current data_file exists in
     the database.
+    The third invocation is used to clean up the database.
     """
+    if not data_file:
+        with pg_connect().cursor() as cursor:
+            cursor.execute('TRUNCATE test_table CASCADE;')
+        return
+
     path = pathlib.Path(__file__) / '..' / 'pg_data' / data_file
     with pg_connect(data_path=path).cursor() as cursor:
         cursor.execute('SELECT num FROM test_table;')

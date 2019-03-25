@@ -23,8 +23,17 @@ You can optionally load data into the database before the test begins, by pointi
 read. The data is automatically deleted after the test function returns, so that it doesn't leak to other tests that
 may expect different data.
 
-A helper function called `load_schema_definitions` can be used to create the database structure by reading SQL DDL
+## Utility Functions
+
+A utility function called `load_schema_definitions` can be used to create the database structure by reading SQL DDL
 files that you provide. Embed it in your own session-scoped fixture and call that together with `pg_connect`.
+
+Another utility, `copy_data`, copies data from files in CSV or text format (as supported by PostgreSQL).
+It can be used directly, or automatically by passing a path to the files to the `pg_connect` fixture.
+
+A third utility, `delete_data`, deletes all data from a set of tables.
+It is used automatically by `pg_connect` to remove data from tables that it loaded with `copy_data`.
+You can also use it directly to clean up any changes made by your test.
 
 
 ## Using Lathorp in Your Project
@@ -53,23 +62,24 @@ For more examples, see `tests/test_fixtures.py` in this project.
 PostgreSQL-readable text).
 Create a session-scoped fixture that calls `load_schema_definitions` and give it the path to your schema definitions.
 Then use this fixture along with `pg_connect` and give it the path to your data files.
-```python
-# In conftest.py
-import pathlib
-from lathorp.fixtures import load_schema_definitions
-from lathorp.fixtures import pg
-from lathorp.fixtures import pg_connect
 
-def init_schema(pg):
-    load_schema_definitions(pathlib.Path('path/to/my/ddl/file_or_directory'))
+    ```python
+    # In conftest.py
+    import pathlib
+    from lathorp import load_schema_definitions
+    from lathorp.fixtures import pg
+    from lathorp.fixtures import pg_connect
 
-# In your test module
-def test_my_fun(init_schema, pg_connect):
-    conn = pg_connect(pathlib.Path('path/to/my_table.csv'))  # loads data into my_table
-    with conn.cursor() as cursor:
-        cursor.execute('SELECT * FROM my_table;')
-```
-Now every test can have access to an initialized database with test-specific data.
+    def init_schema(pg):
+        load_schema_definitions(pathlib.Path('path/to/my/ddl/file_or_directory'))
+
+    # In your test module
+    def test_my_fun(init_schema, pg_connect):
+        conn = pg_connect(pathlib.Path('path/to/my_table.csv'))  # loads data into my_table
+        with conn.cursor() as cursor:
+            cursor.execute('SELECT * FROM my_table;')
+    ```
+    Now every test can have access to an initialized database with test-specific data.
 
 
 ## Why "Lathorp?

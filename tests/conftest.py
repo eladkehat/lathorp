@@ -2,13 +2,13 @@ import pathlib
 
 import pytest
 
+from lathorp import load_schema_definitions
 # Import the fixtures to make them available to the tests
-from lathorp.fixtures import load_schema_definitions
 from lathorp.fixtures import pg  # noqa: F401
 from lathorp.fixtures import pg_connect  # noqa: F401
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='module')
 def init_schema(pg):  # noqa: F811
     """Loads the schema definition from a known location.
 
@@ -18,4 +18,4 @@ def init_schema(pg):  # noqa: F811
     """
     path = (pathlib.Path(__file__) / '..' / 'pg_ddl').resolve()
     assert path.is_dir()
-    load_schema_definitions(pg, path)
+    load_schema_definitions(pg.dsn(), path)
